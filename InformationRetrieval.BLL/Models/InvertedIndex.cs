@@ -8,7 +8,7 @@ namespace InformationRetrieval.BLL.Models
 {
     public class InvertedIndex
     {
-        // Use the concrete type you want
+        // Key: Term, Value: a list of the documents ID's it appeared in
         public SortedDictionary<string, List<int>> Index { get; set; }
     }
 }
