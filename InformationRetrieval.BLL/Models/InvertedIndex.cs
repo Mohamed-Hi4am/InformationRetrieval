@@ -8,7 +8,8 @@ namespace InformationRetrieval.BLL.Models
 {
     public class InvertedIndex
     {
-        // Key: Term, Value: a list of the documents ID's it appeared in
+        // Key: the Term
+        // Value: a list of the documents' IDs the Term appeared in
         public SortedDictionary<string, List<int>> Index { get; set; }
     }
 }
