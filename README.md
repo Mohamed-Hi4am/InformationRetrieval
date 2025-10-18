@@ -12,7 +12,7 @@ This project is a web application built with C\# and ASP.NET Core MVC that demon
 
 ## **Technology Stack**
 
-* **Language:** C\# 8.0  
+* **Language:** C# 8.0  
 * **Framework:** ASP.NET Core MVC (built on .NET Core 3.1)  
 * **Frontend:** HTML, Bootstrap, and vanilla JavaScript.  
 * **Architecture:** 3-Tier (Presentation, Business Logic, Data Access).
@@ -33,7 +33,7 @@ Follow these instructions to get a copy of the project up and running on your lo
 
 You will need the following software installed on your machine:
 
-1. **.NET Core 3.1 SDK** (or a newer version like .NET 6/7/8).  
+1. **.NET Core 3.1 SDK** (or .NET 8.0).  
 2. One of the following development environments:  
    * **Visual Studio 2019** (or newer) with the "ASP.NET and web development" workload installed.  
    * **Visual Studio Code** with the official C\# extension installed.
