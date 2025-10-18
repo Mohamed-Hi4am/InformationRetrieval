@@ -1,3 +1,7 @@
+## **Demo Video**
+
+https://github.com/user-attachments/assets/690d80a0-d4e8-467a-8d40-9db07bb19bcb
+
 # **Information Retrieval System**
 
 This project is a web application built with C\# and ASP.NET Core MVC that demonstrates fundamental concepts of Information Retrieval. It allows users to input a collection of text documents and generates two key data structures: a **Term-Document Incidence Matrix** and an **Inverted Index**. The application also supports executing simple boolean queries (AND, OR, NOT) on the indexed documents.
