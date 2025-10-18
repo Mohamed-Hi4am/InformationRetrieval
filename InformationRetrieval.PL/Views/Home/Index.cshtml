@@ -1,0 +1,218 @@
+﻿@using System.Text.Json
+@model InformationRetrieval.PL.ViewModels.HomeViewModel
+
+@{
+    ViewData["Title"] = "Information Retrieval System";
+}
+
+<div class="text-center">
+    <h1 class="display-4">Information Retrieval System</h1>
+    <p>Submit documents to generate a Term-Document Matrix and an Inverted Index.</p>
+</div>
+
+<hr />
+
+<div class="row">
+    <div class="col-md-12">
+        <ul class="nav nav-tabs" id="inputTab" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="paste-tab" data-bs-toggle="tab" data-bs-target="#paste" type="button" role="tab">Paste Text</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="upload-tab" data-bs-toggle="tab" data-bs-target="#upload" type="button" role="tab">Upload Files</button>
+            </li>
+        </ul>
+        <div class="tab-content" id="myTabContent">
+            <div class="tab-pane fade show active p-3 border border-top-0" id="paste" role="tabpanel">
+                <form asp-action="Process" method="post">
+                    <div class="mb-3">
+                        <label for="docCount" class="form-label">How many documents do you want to paste?</label>
+                        <input type="number" id="docCount" name="NumberOfDocuments" class="form-control" min="1" value="@(Model.PastedDocuments?.Count ?? 1)" />
+                    </div>
+                    <div id="textareas-container">
+                        @{
+                            // Determine the number of textareas to show.
+                            int docCount = Model.PastedDocuments?.Count ?? 1;
+                        }
+                        @for (int i = 0; i < docCount; i++)
+                        {
+                            <div class="mb-2">
+                                <label class="form-label">Document @(i + 1)</label>
+                                <textarea name="PastedDocuments[@i]" class="form-control" rows="3" required>@(Model.PastedDocuments?[i] ?? "")</textarea>
+                            </div>
+                        }
+                    </div>
+                    <button type="submit" class="btn btn-primary mt-3">Show Results</button>
+                </form>
+
+                <script>
+                    // Convert the C# model data into a JavaScript variable
+                    const pastedDocs = @JsonSerializer.Serialize(Model.PastedDocuments ?? new List<string>());
+
+                    function generateTextareas(count, docs) {
+                        const container = document.getElementById('textareas-container');
+                        container.innerHTML = '';
+                        for (let i = 0; i < count; i++) {
+                            const div = document.createElement('div');
+                            div.classList.add('mb-2');
+                            // Check if there is existing document content to pre-fill the textarea
+                            const content = docs[i] || '';
+                            div.innerHTML = `
+                                <label class="form-label">Document ${i + 1}</label>
+                                <textarea name="PastedDocuments" class="form-control" rows="3" required>${content}</textarea>
+                            `;
+                            container.appendChild(div);
+                        }
+                    }
+
+                    document.addEventListener('DOMContentLoaded', function () {
+                        // Call the function with the model data on page load
+                        generateTextareas(document.getElementById('docCount').value, pastedDocs);
+                    });
+                </script>
+            </div>
+            <div class="tab-pane fade p-3 border border-top-0" id="upload" role="tabpanel">
+                <form asp-action="Process" method="post" enctype="multipart/form-data">
+                    <div class="mb-3">
+                        <label for="fileUpload" class="form-label">Select .txt files to upload:</label>
+                        <input asp-for="UploadedFiles" type="file" class="form-control" id="fileUpload" multiple accept=".txt" />
+                    </div>
+                    <button type="submit" class="btn btn-primary">Show Results</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@if (Model.Results != null)
+{
+    <hr class="my-4" />
+    <div class="results-container">
+
+        <div class="alert alert-info">
+            <strong>Results generated from:</strong> @string.Join(", ", Model.Results.DocumentNames)
+        </div>
+
+        <h3>Term-Document Incidence Matrix</h3>
+        <div class="table-responsive">
+            <table class="table table-bordered table-striped">
+                <thead>
+                    <tr>
+                        <th>Term</th>
+                        @foreach (var docName in Model.Results.DocumentNames)
+                        {
+                            <th>@docName</th>
+                        }
+                    </tr>
+                </thead>
+                <tbody>
+                    @for (int i = 0; i < Model.Results.Terms.Count; i++)
+                    {
+                        <tr>
+                            <td><strong>@Model.Results.Terms[i]</strong></td>
+                            @foreach (var cell in Model.Results.IncidenceMatrix[i])
+                            {
+                                <td>@cell</td>
+                            }
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        <h3 class="mt-4">Inverted Index</h3>
+        <div class="table-responsive">
+            <table class="table table-bordered table-striped w-50">
+                <thead>
+                    <tr>
+                        <th>Term</th>
+                        <th>Postings List (Doc #)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var entry in Model.Results.InvertedIndex)
+                    {
+                        <tr>
+                            <td><strong>@entry.Key</strong></td>
+                            <td>@(string.Join(", ", entry.Value.Select(v => Model.Results.DocumentNames[v])))</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        <h3 class="mt-4">Boolean Query</h3>
+        <form asp-action="HandleQuery" method="post" class="row g-3 align-items-center">
+            <input type="hidden" name="ResultsAsJson" value="@JsonSerializer.Serialize(Model.Results)" />
+
+            @if (Model.PastedDocuments != null)
+            {
+                for (int i = 0; i < Model.PastedDocuments.Count; i++)
+                {
+                    <input type="hidden" name="PastedDocuments[@i]" value="@Model.PastedDocuments[i]" />
+                }
+            }
+
+            <div class="col-auto">
+                <input asp-for="Query.Term1" type="text" class="form-control" placeholder="Term 1" required />
+            </div>
+            <div class="col-auto">
+                <select asp-for="Query.Operator" class="form-select">
+                    <option>AND</option>
+                    <option>OR</option>
+                    <option>NOT</option>
+                </select>
+            </div>
+            <div class="col-auto">
+                <input asp-for="Query.Term2" type="text" class="form-control" placeholder="Term 2 (for AND/OR)" />
+            </div>
+            <div class="col-auto">
+                <button type="submit" class="btn btn-success">Answer</button>
+            </div>
+        </form>
+
+        @if (Model.Results.QueryResults != null)
+        {
+            <div class="mt-4">
+                <h4>Query Result</h4>
+                @if (Model.Results.QueryResults.Any())
+                {
+                    <p>Result: <strong>@string.Join(", ", Model.Results.QueryResults)</strong></p>
+                }
+                else
+                {
+                    <p class="text-muted">No matching documents found</p>
+                }
+            </div>
+        }
+    </div>
+}
+
+@section Scripts {
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const docCountInput = document.getElementById('docCount');
+            const container = document.getElementById('textareas-container');
+
+            // This function ONLY draws EMPTY textareas.
+            const drawEmptyTextareas = (count) => {
+                container.innerHTML = '';
+                for (let i = 0; i < count; i++) {
+                    container.innerHTML += `
+                        <div class="mb-2">
+                            <label class="form-label">Document ${i + 1}</label>
+                            <textarea name="PastedDocuments[${i}]" class="form-control" rows="3" required></textarea>
+                        </div>`;
+                }
+            };
+
+            // Only add the dynamic input listener IF the page is fresh (no results).
+            if (@(Model.Results == null ? "true" : "false")) {
+                // Draw the initial empty box.
+                drawEmptyTextareas(docCountInput.value);
+                // Allow the user to change the number of boxes.
+                docCountInput.addEventListener('input', (e) => drawEmptyTextareas(e.target.value));
+            }
+        });
+    </script>
+}
