@@ -12,20 +12,21 @@ namespace InformationRetrieval.PL.Controllers
     public class HomeController : Controller
     {
         private readonly IIndexBuilderService _indexBuilderService;
-        private readonly IBooleanQueryService _queryService; // Add this field
+        private readonly IBooleanQueryService _queryService;
 
-        // Update the constructor to accept both services
         public HomeController(IIndexBuilderService indexBuilderService, IBooleanQueryService queryService)
         {
             _indexBuilderService = indexBuilderService;
             _queryService = queryService; // Assign the service
         }
 
+
         public IActionResult Index()
         {
             var model = new HomeViewModel();
             return View(model);
         }
+
 
         [HttpPost]
         public IActionResult Process(HomeViewModel model)
@@ -65,7 +66,6 @@ namespace InformationRetrieval.PL.Controllers
             // Don't proceed if no valid documents were submitted.
             if (!documents.Any())
             {
-                // Optionally, add a message to the user via TempData or ModelState.
                 return RedirectToAction("Index");
             }
 
@@ -79,7 +79,7 @@ namespace InformationRetrieval.PL.Controllers
                 DocumentNames = bllResult.Matrix.DocumentNames,
                 IncidenceMatrix = bllResult.Matrix.Incidence,
                 InvertedIndex = bllResult.Index.Index,
-                QueryResults = null // Initially, there are no query results.
+                QueryResults = null
             };
 
             // 4. Update the main model and return the view to display the results.
@@ -92,7 +92,7 @@ namespace InformationRetrieval.PL.Controllers
             return View("Index", viewModel);
         }
 
-        // This is the fully corrected 'HandleQuery' action
+
         [HttpPost]
         public IActionResult HandleQuery(HomeViewModel model)
         {

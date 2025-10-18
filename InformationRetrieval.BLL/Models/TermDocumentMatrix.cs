@@ -10,6 +10,6 @@ namespace InformationRetrieval.BLL.Models
     {
         public List<string> Terms { get; set; } // The sorted vocabulary
         public List<string> DocumentNames { get; set; }
-        public List<List<int>> Incidence { get; set; } // The 0s and 1s
+        public List<List<int>> Incidence { get; set; } // The 0s and 1s (The 2D array: matrix)
     }
 }
