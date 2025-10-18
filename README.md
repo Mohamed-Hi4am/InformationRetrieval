@@ -43,7 +43,7 @@ You will need the following software installed on your machine:
 #### **Option 1: Using Visual Studio (Recommended)**
 
 1. Clone the repository:  
-   git clone \<(https://github.com/Mohamed-Hi4am/InformationRetrieval.git)\>
+   git clone https://github.com/Mohamed-Hi4am/InformationRetrieval.git
 
 2. Open the InformationRetrieval.sln solution file in Visual Studio.  
 3. Press F5 or the green "Run" button. Visual Studio will automatically restore dependencies, build the solution, and launch the application in your default web browser.
@@ -51,7 +51,7 @@ You will need the following software installed on your machine:
 #### **Option 2: Using the .NET CLI**
 
 1. Clone the repository:  
-   git clone \<(https://github.com/Mohamed-Hi4am/InformationRetrieval.git)\>
+   git clone https://github.com/Mohamed-Hi4am/InformationRetrieval.git
 
 2. Open a terminal or command prompt and navigate to the root folder of the repository.  
 3. Restore the project dependencies:  
