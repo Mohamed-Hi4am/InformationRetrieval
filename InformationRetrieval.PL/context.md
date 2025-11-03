@@ -14,7 +14,7 @@ The solution follows a 3-tier architecture:
 
 ### Core Functionality
 
-The application provides four main features:
+The application provides five main features:
 
 #### 1. Document Input
 - Paste Text: Users can dynamically specify how many documents to paste (named D1, D2, etc.)
@@ -32,13 +32,26 @@ The application provides four main features:
 - Uses `SortedDictionary` for consistent alphabetical ordering
 - Displays term-to-document relationships in a table
 
-#### 4. Boolean Query Execution
+#### 4. Positional Index
+- Extends inverted index to store the positions of each term within documents
+- Maps each term to a dictionary of document IDs, each containing a list of positions
+- Enables phrase query processing by tracking exact token positions
+- Built simultaneously with inverted index for efficiency
+
+#### 5. Boolean Query Execution
 - Supports three operators:
   - AND: Returns documents containing both terms (intersection)
   - OR: Returns documents containing either term (union)
   - NOT: Returns documents NOT containing the term
 - Uses the inverted index for efficient query processing
 - Returns document names matching the query
+
+#### 6. Phrase Query Execution
+- Allows users to search for exact phrases (consecutive word sequences)
+- Uses positional index to find documents where terms appear in sequence
+- Applies same tokenization rules as document processing (lowercase, hyphen handling)
+- Supports single-term and multi-term phrases
+- Returns documents containing the exact phrase in order
 
 ---
 
@@ -51,18 +64,25 @@ The application provides four main features:
 2. IIndexBuilderService / IndexBuilderService
    - Builds term-document matrix
    - Constructs inverted index
-   - Returns ProcessingResult containing both structures
+   - Constructs positional index with token positions
+   - Returns ProcessingResult containing all three structures
 
 3. IBooleanQueryService / BooleanQueryService
    - Executes boolean queries (AND, OR, NOT)
    - Uses inverted index for lookups
    - Returns matching document names
 
+4. IPositionalQueryService / PositionalQueryService
+   - Executes phrase queries using positional index
+   - Performs positional intersection to find consecutive terms
+   - Handles edge cases (single term, missing terms, empty queries)
+   - Returns matching document names
+
 ---
 
 ### View Models (Presentation Layer)
 
-- HomeViewModel: Main view model with document input, query data, and results
+- HomeViewModel: Main view model with document input, query data, results, cache key, and phrase query text
 - QueryViewModel: Boolean query parameters (Term1, Term2, Operator)
 - ResultViewModel: Contains matrix, inverted index, and query results
 
@@ -70,10 +90,11 @@ The application provides four main features:
 
 ### Controller Flow
 
-HomeController has three actions:
+HomeController has four actions:
 1. Index(): Displays initial form
-2. Process(): Processes documents → generates matrix/index → displays results
-3. HandleQuery(): Executes boolean query → updates results → redisplays page
+2. Process(): Processes documents → generates matrix/inverted index/positional index → stores in cache → displays results
+3. HandleQuery(): Retrieves from cache → executes boolean query → updates results → redisplays page
+4. HandlePhraseQuery(): Retrieves from cache → executes phrase query → updates results → redisplays page
 
 ---
 
@@ -84,13 +105,18 @@ HomeController has three actions:
 - Bootstrap 5 for UI
 - Dependency Injection for service registration
 - System.Text.Json for serialization
+- IMemoryCache for storing processing results (avoiding large serialization)
 
 ---
 
 ### Notable Implementation Details
 
-- Results persist between query submissions via JSON serialization in hidden form fields
+- Processing results stored in IMemoryCache (20-minute expiration) to avoid serializing large positional index
+- Cache key passed through hidden form fields to retrieve results for queries
+- Fallback to JSON deserialization for backward compatibility if cache expires
 - Dynamic JavaScript for adding/removing document input fields
 - Tab-based UI for switching between paste and upload modes
 - Clean separation of concerns with interface-based services
+- Positional index built in single pass alongside inverted index for efficiency
+- Positional intersection algorithm finds consecutive term occurrences
 - Copyright footer shows "Mohamed Hisham" as the creator

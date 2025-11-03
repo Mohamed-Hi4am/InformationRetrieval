@@ -10,5 +10,6 @@ namespace InformationRetrieval.BLL.Models
     {
         public TermDocumentMatrix Matrix { get; set; }
         public InvertedIndex Index { get; set; }
+        public PositionalIndex PositionalIndex { get; set; }
     }
 }
