@@ -3,6 +3,7 @@ using InformationRetrieval.BLL.Services;
 using InformationRetrieval.PL.Models;
 using InformationRetrieval.PL.ViewModels;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Caching.Memory;
 using System.Diagnostics;
 using System.Text.Json;
 using System.IO;
@@ -13,11 +14,22 @@ namespace InformationRetrieval.PL.Controllers
     {
         private readonly IIndexBuilderService _indexBuilderService;
         private readonly IBooleanQueryService _queryService;
+        private readonly IPositionalQueryService _positionalQueryService;
+        private readonly ITextProcessorService _textProcessorService;
+        private readonly IMemoryCache _cache;
 
-        public HomeController(IIndexBuilderService indexBuilderService, IBooleanQueryService queryService)
+        public HomeController(
+            IIndexBuilderService indexBuilderService, 
+            IBooleanQueryService queryService,
+            IPositionalQueryService positionalQueryService,
+            ITextProcessorService textProcessorService,
+            IMemoryCache cache)
         {
             _indexBuilderService = indexBuilderService;
-            _queryService = queryService; // Assign the service
+            _queryService = queryService;
+            _positionalQueryService = positionalQueryService;
+            _textProcessorService = textProcessorService;
+            _cache = cache;
         }
 
 
@@ -72,7 +84,11 @@ namespace InformationRetrieval.PL.Controllers
             // 2. Call the BLL to process the data.
             var bllResult = _indexBuilderService.Build(documents);
 
-            // 3. Map BLL models to the PL's ResultViewModel.
+            // 3. Store the full processing result in cache
+            var cacheKey = Guid.NewGuid().ToString("N");
+            _cache.Set(cacheKey, bllResult, TimeSpan.FromMinutes(20));
+
+            // 4. Map BLL models to the PL's ResultViewModel.
             var resultViewModel = new ResultViewModel
             {
                 Terms = bllResult.Matrix.Terms,
@@ -82,11 +98,12 @@ namespace InformationRetrieval.PL.Controllers
                 QueryResults = null
             };
 
-            // 4. Update the main model and return the view to display the results.
+            // 5. Update the main model and return the view to display the results.
             var viewModel = new HomeViewModel
             {
                 Results = resultViewModel,
-                PastedDocuments = model.PastedDocuments // This line sends the data back
+                PastedDocuments = model.PastedDocuments, // This line sends the data back
+                CacheKey = cacheKey
             };
 
             return View("Index", viewModel);
@@ -96,8 +113,27 @@ namespace InformationRetrieval.PL.Controllers
         [HttpPost]
         public IActionResult HandleQuery(HomeViewModel model)
         {
-            // 1. Deserialize the results that were stored in the hidden form field.
-            var results = JsonSerializer.Deserialize<ResultViewModel>(model.ResultsAsJson);
+            ProcessingResult bllResult = null;
+            ResultViewModel results = null;
+
+            // Try to get from cache first
+            if (!string.IsNullOrEmpty(model.CacheKey) && _cache.TryGetValue(model.CacheKey, out ProcessingResult cachedResult))
+            {
+                bllResult = cachedResult;
+                results = new ResultViewModel
+                {
+                    Terms = bllResult.Matrix.Terms,
+                    DocumentNames = bllResult.Matrix.DocumentNames,
+                    IncidenceMatrix = bllResult.Matrix.Incidence,
+                    InvertedIndex = bllResult.Index.Index,
+                    QueryResults = null
+                };
+            }
+            else
+            {
+                // Fallback to JSON deserialization
+                results = JsonSerializer.Deserialize<ResultViewModel>(model.ResultsAsJson);
+            }
 
             // 2. Create the BLL query model from the view model's query data.
             var queryModel = new QueryModel
@@ -121,7 +157,64 @@ namespace InformationRetrieval.PL.Controllers
             var finalModel = new HomeViewModel {
                 Results = results,
                 Query = model.Query,
-                PastedDocuments = model.PastedDocuments
+                PastedDocuments = model.PastedDocuments,
+                CacheKey = model.CacheKey
+            };
+
+            return View("Index", finalModel);
+        }
+
+        [HttpPost]
+        public IActionResult HandlePhraseQuery(HomeViewModel model)
+        {
+            ProcessingResult bllResult = null;
+            ResultViewModel results = null;
+
+            // Try to get from cache first
+            if (!string.IsNullOrEmpty(model.CacheKey) && _cache.TryGetValue(model.CacheKey, out ProcessingResult cachedResult))
+            {
+                bllResult = cachedResult;
+                results = new ResultViewModel
+                {
+                    Terms = bllResult.Matrix.Terms,
+                    DocumentNames = bllResult.Matrix.DocumentNames,
+                    IncidenceMatrix = bllResult.Matrix.Incidence,
+                    InvertedIndex = bllResult.Index.Index,
+                    QueryResults = null
+                };
+            }
+            else
+            {
+                // Fallback to JSON deserialization
+                results = JsonSerializer.Deserialize<ResultViewModel>(model.ResultsAsJson);
+                // Can't execute phrase query without positional index
+                results.QueryResults = new List<string> { "Cache expired. Please reprocess documents." };
+                var errorModel = new HomeViewModel
+                {
+                    Results = results,
+                    PastedDocuments = model.PastedDocuments,
+                    PhraseQueryText = model.PhraseQueryText
+                };
+                return View("Index", errorModel);
+            }
+
+            // Execute phrase query using positional index
+            var queryResults = _positionalQueryService.ExecutePhraseQuery(
+                model.PhraseQueryText, 
+                bllResult.PositionalIndex, 
+                bllResult.Matrix.DocumentNames,
+                _textProcessorService);
+
+            // Update results with query matches
+            results.QueryResults = queryResults;
+
+            // Prepare the final model to send back to the view
+            var finalModel = new HomeViewModel
+            {
+                Results = results,
+                PastedDocuments = model.PastedDocuments,
+                CacheKey = model.CacheKey,
+                PhraseQueryText = model.PhraseQueryText
             };
 
             return View("Index", finalModel);

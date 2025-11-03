@@ -11,9 +11,13 @@ namespace InformationRetrieval.PL
             // Add services to the container.
             builder.Services.AddControllersWithViews();
 
+            // Add Memory Cache for storing processing results
+            builder.Services.AddMemoryCache();
+
             builder.Services.AddScoped<IIndexBuilderService, IndexBuilderService>();
             builder.Services.AddScoped<ITextProcessorService, TextProcessorService>();
             builder.Services.AddScoped<IBooleanQueryService, BooleanQueryService>();
+            builder.Services.AddScoped<IPositionalQueryService, PositionalQueryService>();
 
             var app = builder.Build();
 

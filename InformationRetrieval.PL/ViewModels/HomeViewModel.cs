@@ -18,5 +18,11 @@
 
         // This holds the deserialized results to render the page.
         public ResultViewModel Results { get; set; }
+
+        // Cache key for storing ProcessingResult in memory cache
+        public string CacheKey { get; set; }
+
+        // For phrase query input
+        public string PhraseQueryText { get; set; }
     }
 }

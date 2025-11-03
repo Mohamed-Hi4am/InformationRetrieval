@@ -49,17 +49,37 @@ namespace InformationRetrieval.BLL.Services
                 incidenceMatrix.Add(row);
             }
 
-            // 3. Build the Inverted Index
+            // 3. Build the Inverted Index and Positional Index simultaneously
             var invertedIndexDict = new Dictionary<string, List<int>>();
+            var positionalIndexDict = new Dictionary<string, Dictionary<int, List<int>>>();
+            
             for (int docIndex = 0; docIndex < allTokensByDoc.Count; docIndex++)
             {
-                foreach (var token in allTokensByDoc[docIndex].Distinct())
+                var tokens = allTokensByDoc[docIndex];
+                for (int position = 0; position < tokens.Count; position++)
                 {
+                    var token = tokens[position];
+                    
+                    // Build inverted index (unique document IDs per term)
                     if (!invertedIndexDict.ContainsKey(token))
                     {
                         invertedIndexDict[token] = new List<int>();
                     }
-                    invertedIndexDict[token].Add(docIndex);
+                    if (!invertedIndexDict[token].Contains(docIndex))
+                    {
+                        invertedIndexDict[token].Add(docIndex);
+                    }
+                    
+                    // Build positional index (positions per document per term)
+                    if (!positionalIndexDict.ContainsKey(token))
+                    {
+                        positionalIndexDict[token] = new Dictionary<int, List<int>>();
+                    }
+                    if (!positionalIndexDict[token].ContainsKey(docIndex))
+                    {
+                        positionalIndexDict[token][docIndex] = new List<int>();
+                    }
+                    positionalIndexDict[token][docIndex].Add(position);
                 }
             }
 
@@ -76,6 +96,10 @@ namespace InformationRetrieval.BLL.Services
                 {
                     // The dictionary should also be sorted by term for consistency
                     Index = new SortedDictionary<string, List<int>>(invertedIndexDict)
+                },
+                PositionalIndex = new PositionalIndex
+                {
+                    Index = new SortedDictionary<string, Dictionary<int, List<int>>>(positionalIndexDict)
                 }
             };
 
